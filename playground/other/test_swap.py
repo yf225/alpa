@@ -11,8 +11,9 @@ import flax.linen as nn
 import jax
 import jax.numpy as jnp
 from jax.lib import xla_client
+from jaxlib.xla_extension import DeviceArray
 
-from parax.model.bert_model import BertConfig, FlaxBertLayer
+from parax.model.bert_model import BertConfig, FlaxBertLayerCollection
 from parax.xla_pass_context import XlaPassContext
 
 from timeit import timeit
@@ -21,18 +22,28 @@ def test_bert_layer():
     batch_size = 64
     seq_len = 64
     hidden_size = 768
+    num_hidden_layers = 3
+    num_heads = 768 // 96
 
     hidden_states = jnp.ones((batch_size, seq_len, hidden_size), dtype=jnp.float32)
     attention_mask = jnp.ones((batch_size, seq_len), dtype=jnp.int32)
     label = jnp.ones((batch_size, seq_len, hidden_size), dtype=jnp.float32)
 
     # Init model and optimizer
-    model = FlaxBertLayer(BertConfig(
-        hidden_size=hidden_size, attention_probs_dropout_prob=0))
+    # model = FlaxBertLayer(BertConfig(
+    #     hidden_size=hidden_size, attention_probs_dropout_prob=0))
+    model = FlaxBertLayerCollection(
+      BertConfig(
+        num_hidden_layers=num_hidden_layers,
+        hidden_size=hidden_size,
+        intermediate_size=hidden_size * 4,
+        num_attention_heads=num_heads)
+    )
     rngkey = jax.random.PRNGKey(0)
     params = model.init(rngkey, hidden_states, attention_mask)
-    optimizer = optim.GradientDescent(1e-2).create(params)
+    flatten_params = jax.tree_flatten(params.tree_flatten()[0][0]['params'], lambda x : x is DeviceArray)[0]
 
+    optimizer = optim.GradientDescent(1e-2).create(params)
     def train_step(optimizer, batch):
         def loss_func(params):
             rngs = {"dropout": batch['rng']}
@@ -54,31 +65,17 @@ def test_bert_layer():
     gpu_backend = xla_client.get_local_backend("gpu")
     with XlaPassContext({
       "swap::enable": True,
-      "swap::bound": 170 * 1024 * 1024  
+      "swap::bound": 400 * 1024 * 1024  
       # currently, the bound ignores input parameter size, 
       # so there is a gap between the bound and total allocation size
     }):
       compiled_computation = gpu_backend.compile(c)
-    print(compiled_computation.total_allocation_size())
+    # print(compiled_computation.total_allocation_size())
+    size = compiled_computation.total_allocation_size()
     # print(compiled_computation.hlo_modules()[0].to_string())
 
-    host_inputs = [np.ones((),dtype=np.int32),
-    np.ones((768),dtype=np.float32),
-    np.ones((768),dtype=np.float32),
-    np.ones((768),dtype=np.float32),
-    np.ones((768, 768),dtype=np.float32),
-    np.ones((2304),dtype=np.float32),
-    np.ones((768, 2304),dtype=np.float32),
-    np.ones((3072),dtype=np.float32),
-    np.ones((768, 3072),dtype=np.float32),
-    np.ones((768),dtype=np.float32),
-    np.ones((768),dtype=np.float32),
-    np.ones((768),dtype=np.float32),
-    np.ones((3072, 768),dtype=np.float32),
-    np.ones((64, 64),dtype=np.int32),
-    np.ones((64, 64, 768),dtype=np.float32),
-    np.ones((64, 64, 768),dtype=np.float32),
-    np.ones((2),dtype=np.uint32)]
+    host_inputs = [np.ones((),dtype=np.int32)] + flatten_params +\
+    [attention_mask, hidden_states, label, np.ones((2), dtype=np.uint32)]
     device_input = [gpu_backend.buffer_from_pyval(x) for x in host_inputs]
     compiled_computation.execute(device_input)
     compiled_computation.execute(device_input)
@@ -88,33 +85,23 @@ def test_bert_layer():
     number = 100
     time_cost = timeit(stmt, globals={**globals(), **locals()},
                        number=number) / number
-    print(time_cost)
+    print(size, "Bytes,", time_cost, "seconds")
+    print(size / 845623444 * 100, "percents of space,", 0.08257338968105614 / time_cost * 100, "percents of speed")
 
     """----------------results:----------------"""
 
     # testbench: 2070 SUPER(f32 9.1 TFLOPS, PCIe3.0*16 with 16GB/s)
-    # without swap: 
-    # 0.027576977228745816s, 346143384 Bytes, set to 400
+    # 3 layers
+    # without swap
+    # 845623444 Bytes, 0.08257338968105614s
 
-    # with swap:
-    # 0.026839641025289893s, 308394648 Bytes, set to 320
+    # with swap(300MB)
+    # 472248468 Bytes, 0.11426283085718751s
+    # 55.85 percents of space, 72.31 percents of speed
 
-    # with swap:
-    # 0.027199601493775843s, 320977560 Bytes, set to 300
-
-    # with swap: 
-    # 0.02660452459938824s, 295811736 Bytes, set to: 260
-
-    # with swap: 
-    # 0.026400231635197998s, 270645912 Bytes, set to: 200
-
-    # with swap: 
-    # 0.02796688610687852s, 245480088 Bytes, set to: 170
-    # 1.3% more time(5.8%compared with swap setting 200), 29% less memory
-
-    # with swap: 
-    # 0.04833599615842104s, 245463704 Bytes, set to: 150
-    # warning: memory bound is impossible. 
+    # with swap(400MB)
+    # 585461908 Bytes, 0.09247550043277443s
+    # 69.23  percents of space,  89.29  percents of speed
 
 if __name__ == "__main__":
     os.environ["XLA_PYTHON_CLIENT_ALLOCATOR"] = "platform"
