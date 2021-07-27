@@ -37,6 +37,7 @@ class BertConfig:
         position_embedding_type="absolute",
         use_cache=True,
         tie_word_embeddings=True,
+        enable_checkpoint=False,
         **kwargs
     ):
         self.vocab_size = vocab_size
@@ -55,6 +56,7 @@ class BertConfig:
         self.position_embedding_type = position_embedding_type
         self.use_cache = use_cache
         self.tie_word_embeddings = tie_word_embeddings
+        self.enable_checkpoint = enable_checkpoint
 
 
 ACT2FN = {
@@ -296,9 +298,26 @@ class FlaxBertLayerCollection(nn.Module):
     dtype: jnp.dtype = jnp.float32  # the dtype of the computation
 
     def setup(self):
-        self.layers = [
-            FlaxBertLayer(self.config, name=str(i), dtype=self.dtype) for i in range(self.config.num_hidden_layers)
-        ]
+        if self.config.enable_checkpoint:
+            # from math import sqrt, ceil
+            # sqrt_layer_num = ceil(sqrt(self.config.num_hidden_layers))
+            # rest_layers = self.config.num_hidden_layers
+            # self.layers = []
+            # from copy import deepcopy
+            # while(rest_layers > 0): 
+            #   new_config = deepcopy(self.config)
+              
+            #   new_config.num_hidden_layers = remat_layer_num = min(sqrt_layer_num, rest_layers)
+            #   new_config.enable_checkpoint = False
+            #   self.layers += (nn.remat(FlaxBertLayerCollection)(new_config),)
+            #   rest_layers -= remat_layer_num
+            self.layers = [
+                nn.remat(FlaxBertLayer, concrete=True)(self.config, name=str(i), dtype=self.dtype) for i in range(self.config.num_hidden_layers)
+            ]
+        else: 
+            self.layers = [
+                FlaxBertLayer(self.config, name=str(i), dtype=self.dtype) for i in range(self.config.num_hidden_layers)
+            ]
 
     def __call__(
         self,
