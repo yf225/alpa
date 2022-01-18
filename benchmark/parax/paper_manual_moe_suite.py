@@ -34,9 +34,14 @@ moe_specs = {
 
 "10B":  (1024, 1536,   16,    16,      32000,   32,),
 "27B":   (1024, 2048,   16,    16,      32000,   48,),
-"70B":   (1024, 2048,   32,    16,      32000,   64,),
+"70B":   (1024, 2048,   32,    64,      32000,   64,),
 "140B":   (1024, 2048,   32,    16,      32000,   128,),
 
+
+"70B-":   (1024, 2048,   8,    16,      32000,   64,),
+"70B--":   (1024, 2048,   4,    16,      32000,   64,),
+
+"70B---":   (1024, 2048,   2,    16,      32000,   64,),
 
 }
 
@@ -64,9 +69,35 @@ test_moe_suite = {
 ],
 
 16: [
+    # hanging
+    # (1024, *moe_specs["70B---"],  2048,   1,  8,   1,   8,   2,  128,  False, *fixed_params, 1),
+    # invalid sharding spec:
+    (2, *moe_specs["70B---"],  2048,   1,  8,   1,   8,   2,  1,  False, *fixed_params, 1),
+
 ],
 
 32: [
+
+
+    (2, *moe_specs["70B--"],  2048,   1,  8,   1,   8,   4,  1,  False, *fixed_params, 1),
+    # invalid sharding spec:
+    # (1024, *moe_specs["70B--"],  2048,   1,  8,   1,   8,   4,  512,  False, *fixed_params, 1),
+],
+
+64: [
+    # hanging case
+    # (1024, *moe_specs["70B"],  2048,   1,  8,   1,   8,   8,  128,  False, *fixed_params, 1),
+
+    (1, *moe_specs["70B"],  2048,   1,  64,   1,   8,   8,  1,  False, *fixed_params, 1),
+
+
+
+    # invalid sharding spec:
+    # (16, *moe_specs["70B-"],  2048,   1,  8,   1,   8,   8,  8,  False, *fixed_params, 1),
+    # (8, *moe_specs["70B"],  2048,   1,  8,   1,   8,   8,  4,  False, *fixed_params, 1),
+    #(1024, *moe_specs["70B"],  2048,   1,  8,   1,   8,   8,  512,  False, *fixed_params, 1),
+
+
 ]
 
 }

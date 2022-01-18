@@ -78,7 +78,8 @@ if __name__ == "__main__":
              num_micro_batches, force_batch_dim_mapping, use_remat, prefer_reduce_scatter,
              auto_pipeline, overwrite_global_config_dict) = benchmark_case
             model_config = (batch_size, seq_len, hidden_size, num_layers, num_heads, num_experts, expert_group_size)
-            pipeline_stage_mode = "auto_gpipe" if auto_pipeline else "uniform_layer_gpipe"
+            # pipeline_stage_mode = "auto_gpipe" if auto_pipeline else "uniform_layer_gpipe"
+            pipeline_stage_mode = "uniform_layer_gpipe"
         elif model_type == "wresnet":
             (batch_size, image_size, num_layers, num_channels, width_factor, dtype,
              num_micro_batches, force_batch_dim_mapping,
