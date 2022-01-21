@@ -281,7 +281,13 @@ class DecentralizedDistributedRuntime(BaseDistributedRuntime):
         for mesh_idx, mesh in enumerate(self.physical_meshes):
             for worker_idx, worker in enumerate(mesh.workers):
                 worker_to_idx[worker] = (mesh_idx, worker_idx)
+        import time
+        start_time = time.time()
 
+        small_loop_time_1 = 0.0
+        small_loop_time_2 = 0.0
+        small_loop_time_3 = 0.0
+        small_loop_time_4 = 0.0
         for _, sched in enumerate(self.schedule.schedules):
             for worker in worker_tmp_instructions:
                 worker_tmp_instructions[worker] = []
@@ -312,14 +318,21 @@ class DecentralizedDistributedRuntime(BaseDistributedRuntime):
                 ]
                 if len(keys):
                     # TODO(yonghao): only compile alloc once, use multiple times
+
+                    start_time_2 = time.time()
                     output_uuids = self._compile_alloc(to_reshard_vars,
                                                        reshard_sharding_specs,
                                                        mesh_idx, var_at,
                                                        executable_config_lists,
                                                        keys, False)
+                    # output_uuids = self.get_next_uuids(
+                    #     len(to_reshard_vars) * self.physical_meshes[mesh_idx].num_devices).reshape(
+                    #     len(self.physical_meshes[mesh_idx].workers), len(to_reshard_vars), -1)
                     # (args, workers, devices)
                     transposed = output_uuids.transpose([1, 0, 2])
                     recv_uuid_list = list(transposed)
+                    small_loop_time_2 += time.time() - start_time_2
+
 
                     for invar, recv_uuids in zip(to_reshard_vars,
                                                  recv_uuid_list):
@@ -342,6 +355,7 @@ class DecentralizedDistributedRuntime(BaseDistributedRuntime):
                         physical_mesh.num_devices).reshape(
                             -1, num_devices_per_host)
 
+                start_time_3 = time.time()
                 exec_uuid = executable_uuids[stage_idx]
                 donated_invars = self.stages[stage_idx].donated_invars
                 for worker_idx, worker in enumerate(physical_mesh.workers):
@@ -358,10 +372,12 @@ class DecentralizedDistributedRuntime(BaseDistributedRuntime):
                     for idx, outvar in enumerate(stage.outvars):
                         key = (repr(outvar), batch_idx)
                         output_uuids[idx] = var_at[key][mesh_idx][worker_idx]
+                    start_time_4 = time.time()
                     for idx in range(len(stage.invars)):
                         if donated_invars[idx]:
                             donation_mapping[mesh_idx].update(
                                 list(input_uuids[idx]), list(output_uuids[idx]))
+                    small_loop_time_4 += time.time() - start_time_4
 
                     kwargs = {
                         "skip_grad_sync":
@@ -376,6 +392,7 @@ class DecentralizedDistributedRuntime(BaseDistributedRuntime):
                                                 output_uuids,
                                                 kwargs,
                                                 info=f"stage {stage_idx}"))
+                small_loop_time_3 += time.time() - start_time_3
                 # free all received buffers
                 # received_uuids = [
                 #     var_at[key].pop(mesh_idx) for key in received_keys
@@ -387,6 +404,13 @@ class DecentralizedDistributedRuntime(BaseDistributedRuntime):
                 #             PipelineInstruction.Free(uuids[worker_idx]))
             for worker, worker_instruction in worker_tmp_instructions.items():
                 self.instruction_lists[worker].extend(worker_instruction)
+            end_tim_1 = time.time()
+
+        end_time = time.time()
+        print(f">>>> small loop 2 takes {small_loop_time_2}....")
+        print(f">>>> small loop 3 takes {small_loop_time_3}....")
+        print(f">>>> small loop 4 takes {small_loop_time_4}....")
+        print(f">>>> compile loop takes {end_time - start_time}....")
         # output info
         self._compile_collect_outputs(var_at)
         # add FREE insts
@@ -1131,10 +1155,10 @@ class PipelineMeshWorkerExecutable:
                 self.worker.run_resharding_recv_task(
                     instruction.task_uuid, instruction.output_uuids,
                     instruction.opaques["set_empty_buffer"])
-                if instruction.opaques["allgather_uuid"] is not None:
-                    self.worker.run_allgather_task(
-                        instruction.opaques["allgather_uuid"],
-                        instruction.output_uuids)
+                # if instruction.opaques["allgather_uuid"] is not None:
+                #     self.worker.run_allgather_task(
+                #         instruction.opaques["allgather_uuid"],
+                #         instruction.output_uuids)
                 timers("resharding_recv").suspend()
             elif instruction.opcode == PipelineInstType.FREE:
                 timers("free").start()

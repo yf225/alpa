@@ -91,7 +91,7 @@ class GlobalConfig:
         # in pipeline parallel for each stage. Disabling it helps debug.
         self.pipeline_use_signal_send_recv = False
         self.precompile_resharding_tasks = True
-        self.use_scatter_gather = True
+        self.use_scatter_gather = False
         self.eagerly_create_communicators = True
 
         ########## Options of XLA compilation ##########

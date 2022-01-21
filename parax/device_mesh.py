@@ -341,13 +341,13 @@ class MeshHostWorker:
 
     def put_resharding_allgather_task(self, uuid, tasks):
         all_gather_task = ReshardingAllGatherTask(tasks)
-        allgather_specs = all_gather_task.allgather_specs
-        for group_idx in allgather_specs:
-            allgather_spec: ReshardingAllGatherSpec = allgather_specs[group_idx]
-            device_ids = sorted(allgather_spec.device_ids)
-            if repr(device_ids) not in self.allgather_communicators:
-                communicators = nccl.NcclCommunicator.initAll(list(device_ids))
-                self.allgather_communicators[repr(device_ids)] = communicators
+        # allgather_specs = all_gather_task.allgather_specs
+        # for group_idx in allgather_specs:
+        #     allgather_spec: ReshardingAllGatherSpec = allgather_specs[group_idx]
+        #     device_ids = sorted(allgather_spec.device_ids)
+        #     if repr(device_ids) not in self.allgather_communicators:
+        #         communicators = nccl.NcclCommunicator.initAll(list(device_ids))
+        #         self.allgather_communicators[repr(device_ids)] = communicators
         self.allgather_tasks[uuid] = all_gather_task
 
     def run_allgather_task(self, uuid, buffer_uuids):

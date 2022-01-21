@@ -40,6 +40,10 @@ gpt_specs = {
 "6.7B-half": (1024,  4096,  16,   32,   51200,),
 "2.7B-half": (1024,  2560,  4,    32,   51200,),
 "15B-":      (1024,  5120,  4,    40,   51200,),
+
+
+
+"39B-":  (1024,  8192,  16,    64,   51200,),
 }
 
               # Remat, RS,   pipeline_stage_mode,   overwrite_global_config_dict
@@ -52,18 +56,29 @@ test_gpt_suite = {
 1: [
 ],
 
+
+2: [
+    (1024,  *gpt_specs["350M"],  1,   1,   1,   1,   2,  1024,    True,  *fixed_params),
+],
+
 4: [
-    (256,  *gpt_specs["760M"], 4,   1,   1,   4,   1,  32,  True,  *fixed_params),
+    # (64,  *gpt_specs["760M"], 4,   1,   1,   4,   1,  64,  True,  *fixed_params),
+
+    (2048,  *gpt_specs["350M"],  2,   1,   1,   2,   2,  1024,    True,  *fixed_params),
 ],
 
 8: [
     #B,         model,         LD0, LD1, PD0, PD1,  PP,  NB, FM, ...
     # 222 performance case. Ours: 37 TFLOPS. Megatron: 38 TFLOPS.
-    (32,  *gpt_specs["2.7B"],  2,   2,   1,   4,   2,  4,    False,  *fixed_params),
+    # (32,  *gpt_specs["2.7B"],  2,   2,   1,   4,   2,  4,    False,  *fixed_params),
+
+    # (1024,  *gpt_specs["2.7B"],  1,   2,   1,   2,   4,  1024,    True,  *fixed_params),
+
+    (2048,  *gpt_specs["2.7B"],  2,   1,   1,   2,   4,  1024,    True,  *fixed_params),
 ],
 
 16: [
-    (1024,  *gpt_specs["6.7B"],  2,   1,   1,   2,   8,  256,    True,  *fixed_params),
+    (1024,  *gpt_specs["6.7B"],  1,   2,   1,   2,   8,  1024,    True,  *fixed_params),
 ],
 
 32: [
@@ -71,6 +86,10 @@ test_gpt_suite = {
 ],
 
 64: [
+    # (512,  *gpt_specs["39B"],  1,   4,   1,   4,   16,  512,    True,  *fixed_params),
+    # (1024,  *gpt_specs["39B"],  1,   4,   1,   4,   16,  128,    True,  *fixed_params),
+    (1024,  *gpt_specs["39B"],  1,   4,   1,   4,   16,  1024,    True,  *fixed_params),
+    # (4,  *gpt_specs["39B-"],  1,   4,   1,   4,   16,  4,    True,  *fixed_params),
 ]
 
 }
