@@ -261,6 +261,7 @@ def distributed_profile_on_mesh(meshes: Sequence[VirtualPhysicalMesh], layers,
     indices = list(range(2 * num_layers))
     stages = []
     compute_cost, max_n_succ_stages, is_profiled = mesh_cached_result
+    all_config_profiled = is_profiled[:,:,:len(autosharding_configs)].all(2)
 
     print("- Generate all stage infos (Jaxpr -> HLO)")
     # TODO(yonghao): only generate these info once for all mesh shapes
@@ -270,6 +271,8 @@ def distributed_profile_on_mesh(meshes: Sequence[VirtualPhysicalMesh], layers,
     for start in tqdm.tqdm(range(0, num_layers)):
         for end in tqdm.tqdm(range(start, num_layers), leave=False):
             if is_full_mesh and not (start == 0 and end == num_layers - 1):
+                continue
+            if all_config_profiled[start, end]:
                 continue
             flops_ratio = (
                 layer_flops_prefix_sum[end + 1] - layer_flops_prefix_sum[start]
