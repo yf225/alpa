@@ -845,6 +845,39 @@ class CrossMeshCommunicator:
                 return dst_sharding_spec, None
 
         assert len(shard_axes) < 2, "Only support 1D and 2D Mesh"
+        # if not global_config.use_scatter_gather:
+        #     return dst_sharding_spec, None
+        # tot_sharding = 1
+        # extra_slice = None
+        #
+        # def dim_spec_chunk_value(spec):
+        #     return spec.chunks[0] if isinstance(spec, pxla.Chunked) else 1
+        #
+        # chunk_dim_to_tensor_dim = []
+        # for dim_spec in dst_sharding_spec.sharding:
+        #     tot_sharding *= dim_spec_chunk_value(dim_spec)
+        #     if isinstance(dim_spec, pxla.Chunked):
+        #         chunk_dim_to_tensor_dim.append(dim)
+        # if tot_sharding == dst_mesh.num_devices:
+        #     return dst_sharding_spec, extra_slice
+        # assert dst_mesh.num_devices % tot_sharding == 0
+        # extra_sharding = dst_mesh.num_devices // tot_sharding
+        #
+        # shard_axes = {}  # tensor axis->mesh axis
+        # for dim_idx, mesh_dim in enumerate(dst_sharding_spec.mesh_mapping):
+        #     if isinstance(mesh_dim, pxla.ShardedAxis):
+        #         shard_axes[chunk_dim_to_tensor_dim[mesh_dim.axis]] = dim_idx
+        #
+        # # TODO(yonghao): Cannot do allgather cross node. Need to support it.
+        # first_mesh_dim = dst_sharding_spec.mesh_mapping[0]
+        # if (isinstance(first_mesh_dim, pxla.Replicated) or
+        #     (dim_spec_chunk_value(dst_sharding_spec.sharding[
+        #         chunk_dim_to_tensor_dim[first_mesh_dim.axis]]) <
+        #      dst_mesh.num_hosts)):
+        #     if dst_mesh.num_hosts > 1:
+        #         return dst_sharding_spec, None
+        #
+        # assert len(shard_axes) < 2, "Only support 1D and 2D Mesh"
 
         # TODO(yonghao): support allgather in multiple dimensions
         cur_dst_sharding = dst_sharding_spec.sharding

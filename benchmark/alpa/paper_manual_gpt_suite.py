@@ -63,18 +63,24 @@ test_gpt_suite = {
 ],
 
 16: [
-    (1024,  *gpt_specs["6.7B"],  2,   1,   1,   2,   8,  256,    True,  *fixed_params),
+    # (256,  *gpt_specs["6.7B"],  1,   4,   1,   4,   4,  256,    True,  *fixed_params),
+    # (256,  *gpt_specs["6.7B"],  1,   4,   1,   4,   4,  256,    True,  *fixed_params),
+    (256,  *gpt_specs["6.7B"],  1,   2,   1,   2,   8,  256,    True,  *fixed_params),
+
 ],
 
 32: [
     # losing cases are below.
-    (4,  *gpt_specs["15B"],  1,   8,   1,   8,   4,  1,    True,  *fixed_params),
+    # (4,  *gpt_specs["15B"],  1,   8,   1,   8,   4,  1,    True,  *fixed_params),
     # (8,  *gpt_specs["15B"],  1,   8,   1,   8,   4,  2,    True,  *fixed_params),
     # (1024,  *gpt_specs["15B"],  1,   8,   1,   8,   4,  256,    True,  *fixed_params),
     # (1024,  *gpt_specs["15B"],  1,   4,   1,   4,   8,  256,    True,  *fixed_params),
+
+    (256, *gpt_specs["15B"], 1, 4, 1, 4, 8, 256, True, *fixed_params),
 ],
 
 64: [
+(256, *gpt_specs["39B"], 1, 4, 1, 4, 16, 256, True, *fixed_params),
 ]
 
 }

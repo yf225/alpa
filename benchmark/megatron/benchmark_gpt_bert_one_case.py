@@ -155,6 +155,10 @@ def benchmark_gpt_bert_one_case(benchmark_case, output_file_name):
     if checkpoint_activations:
         sys.argv += ["--checkpoint-activations"]
     # sys.argv += ["--no-scatter-gather-tensors-in-pipeline"]
+    # sys.argv += ["--no-masked-softmax-fusion"]
+    # sys.argv += ["--no-bias-gelu-fusion"]
+    # sys.argv += ["--no-bias-dropout-fusion"]
+    # sys.argv += ["--no-async-tensor-model-parallel-allreduce"]
     initialize_megatron()
     args = get_args()
     args.padded_vocab_size = vocab_size
