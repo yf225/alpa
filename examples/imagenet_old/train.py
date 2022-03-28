@@ -166,42 +166,26 @@ def eval_step(state, batch):
 
 def create_input_iter(dataset_builder, batch_size, image_size, dtype,
                       sharding_specs, physical_mesh, train, cache):
-  #dataset_name = dataset_builder.info.full_name.replace("/", ":")
-  dataset_name = "imagenet2012:5.*.*"
-
-  print("sharding_specs", sharding_specs)
-
-  def input_iter_func(start, end, batch_size):
-    import tensorflow as tf
-    import tensorflow_datasets as tfds
-    tf.config.experimental.set_visible_devices([], 'GPU')
-    dataset_builder = tfds.builder(dataset_name)
-    ds = input_pipeline.create_split(
-        dataset_builder, batch_size, train, start, end,
-        image_size=image_size, dtype=dtype, cache=cache)
-    it = map(lambda xs: (xs['image']._numpy(), xs['label']._numpy()), ds)
-    return it
-
-    #import numpy as np
-    #batch = (np.random.randn(batch_size, image_size, image_size, 3).astype(np.float32),
-    #         np.random.randn(batch_size).astype(np.int32))
-    ##batch = (np.ones((batch_size, image_size, image_size, 3), np.float32),
-    ##         np.ones((batch_size,), np.int32))
-    #while True:
-    #    yield batch
-
-  if train:
-    num_samples = dataset_builder.info.splits['train'].num_examples
-  else:
-    num_samples = dataset_builder.info.splits['validation'].num_examples
-  avals = (jax.core.ShapedArray((batch_size, image_size, image_size, 3), jnp.float32),
-           jax.core.ShapedArray((batch_size,), jnp.int32))
-  data_loader = alpa.MeshDriverDataLoader(batch_size, num_samples,
-                                          input_iter_func, avals,
-                                          sharding_specs, physical_mesh,
-                                          prefetch_size=4)
-  it = map(lambda xs: {'image': xs[0], 'label': xs[1]}, data_loader)
+  ds = input_pipeline.create_split(
+      dataset_builder, batch_size, image_size=image_size, dtype=dtype,
+      train=train, cache=cache)
+  it = map(lambda xs: jax.tree_map(lambda x: x._numpy(), xs), ds)
+  it = alpa.DataLoader(it, sharding_specs, physical_mesh=physical_mesh, prefetch_size=4)
   return it
+
+  #def aha():
+  #    import numpy as np
+  #    batch = {
+  #        #'image': np.ones((batch_size, image_size, image_size, 3), np.float32),
+  #        #'label': np.ones((batch_size,), np.int64)
+  #        'image': np.random.randn(batch_size, image_size, image_size, 3).astype(np.float32),
+  #        'label': np.random.randn(batch_size).astype(np.int64),
+  #    }
+  #    while True:
+  #        yield batch
+
+  #it = alpa.DataLoader(aha(), sharding_specs, physical_mesh=physical_mesh, prefetch_size=4)
+  #return it
 
 
 class TrainState(train_state.TrainState):
@@ -269,10 +253,10 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
   Returns:
     Final TrainState.
   """
-  #physical_mesh = alpa.LocalPhysicalDeviceMesh()
   ray.init(address="auto")
   physical_mesh = alpa.DeviceCluster().get_physical_mesh()
-  alpa.global_config.xla_client_mem_fraction = 0.91
+  alpa.global_config.xla_client_mem_fraction = 0.95
+  #physical_mesh = alpa.LocalPhysicalDeviceMesh()
   alpa.set_parallelize_options(physical_mesh)
 
   writer = metric_writers.create_default_writer(
@@ -282,8 +266,9 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
 
   image_size = 224
 
-  if config.batch_size % physical_mesh.num_devices > 0:
+  if config.batch_size % jax.device_count() > 0:
     raise ValueError('Batch size must be divisible by the number of devices')
+  local_batch_size = config.batch_size // jax.process_count()
 
   platform = jax.local_devices()[0].platform
 
@@ -336,7 +321,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
   batch = {
     "image": jax.core.ShapedArray(
         (config.batch_size, image_size, image_size, 3), jnp.float32),
-    "label": jax.core.ShapedArray((config.batch_size,), jnp.int32),
+    "label": jax.core.ShapedArray((config.batch_size,), jnp.int64),
   }
   executable = p_train_step.get_executable(state, batch)
   logging.info('Initial compilation completed.')
@@ -344,10 +329,10 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
   sharding_specs = executable.input_sharding_specs[-2:]
 
   train_iter = create_input_iter(
-      dataset_builder, config.batch_size, image_size, input_dtype,
+      dataset_builder, local_batch_size, image_size, input_dtype,
       sharding_specs, physical_mesh, train=True, cache=config.cache)
   eval_iter = create_input_iter(
-      dataset_builder, config.batch_size, image_size, input_dtype,
+      dataset_builder, local_batch_size, image_size, input_dtype,
       sharding_specs, physical_mesh, train=False, cache=config.cache)
 
   train_metrics = []
@@ -370,6 +355,9 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
         }
         summary['ips'] = config.batch_size * config.log_every_steps / (
             time.time() - train_metrics_last_t)
+        summary['system_time'] = time.time() - train_metrics_last_t
+        summary['exec_time'] = sum(physical_mesh.get_remote_timer(executable.timer_name).costs)
+        physical_mesh.reset_remote_timer(executable.timer_name)
         writer.write_scalars(step + 1, summary)
         train_metrics = []
         train_metrics_last_t = time.time()
