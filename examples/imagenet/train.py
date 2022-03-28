@@ -166,9 +166,10 @@ def eval_step(state, batch):
 
 def create_input_iter(dataset_builder, batch_size, image_size, dtype,
                       sharding_specs, physical_mesh, train, cache):
-  dataset_name = dataset_builder.info.full_name.replace("/", ":")
+  #dataset_name = dataset_builder.info.full_name.replace("/", ":")
+  dataset_name = "imagenet2012:5.*.*"
 
-  print(sharding_specs)
+  print("sharding_specs", sharding_specs)
 
   def input_iter_func(start, end, batch_size):
     import tensorflow as tf
@@ -181,10 +182,17 @@ def create_input_iter(dataset_builder, batch_size, image_size, dtype,
     it = map(lambda xs: (xs['image']._numpy(), xs['label']._numpy()), ds)
     return it
 
-  if train:
-    num_samples = dataset_builder.info.splits['train'].num_examples
-  else:
-    num_samples = dataset_builder.info.splits['validation'].num_examples
+    #import numpy as np
+    #batch = (np.ones((batch_size, image_size, image_size, 3), np.float32),
+    #         np.ones((batch_size,), np.int32))
+    #while True:
+    #    yield batch
+
+  #if train:
+  #  num_samples = dataset_builder.info.splits['train'].num_examples
+  #else:
+  #  num_samples = dataset_builder.info.splits['validation'].num_examples
+  num_samples = 10000
   avals = (jax.core.ShapedArray((batch_size, image_size, image_size, 3), jnp.float32),
            jax.core.ShapedArray((batch_size,), jnp.int32))
   data_loader = alpa.MeshDriverDataLoader(batch_size, num_samples,
@@ -263,8 +271,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
   #physical_mesh = alpa.LocalPhysicalDeviceMesh()
   ray.init(address="auto")
   physical_mesh = alpa.DeviceCluster().get_physical_mesh()
-  alpa.global_config.xla_client_mem_fraction = 0.89
-  alpa.global_config.default_autosharding_option.allow_mixed_mesh_shape = True
+  alpa.global_config.xla_client_mem_fraction = 0.91
   alpa.set_parallelize_options(physical_mesh)
 
   writer = metric_writers.create_default_writer(
@@ -287,10 +294,12 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
   else:
     input_dtype = tf.float32
 
-  dataset_builder = tfds.builder(config.dataset)
-  steps_per_epoch = (
-      dataset_builder.info.splits['train'].num_examples // config.batch_size
-  )
+  #dataset_builder = tfds.builder(config.dataset)
+  #steps_per_epoch = (
+  #    dataset_builder.info.splits['train'].num_examples // config.batch_size
+  #)
+  dataset_builder = None
+  steps_per_epoch = 100
 
   if config.num_train_steps == -1:
     num_steps = int(steps_per_epoch * config.num_epochs)
@@ -298,9 +307,10 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
     num_steps = config.num_train_steps
 
   if config.steps_per_eval == -1:
-    num_validation_examples = dataset_builder.info.splits[
-        'validation'].num_examples
-    steps_per_eval = num_validation_examples // config.batch_size
+    #num_validation_examples = dataset_builder.info.splits[
+    #    'validation'].num_examples
+    #steps_per_eval = num_validation_examples // config.batch_size
+    steps_per_eval = 10000
   else:
     steps_per_eval = config.steps_per_eval
 
