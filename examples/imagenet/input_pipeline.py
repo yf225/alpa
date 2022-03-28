@@ -172,8 +172,8 @@ def preprocess_for_eval(image_bytes, dtype=tf.float32, image_size=IMAGE_SIZE):
   return image
 
 
-def create_split(dataset_builder, batch_size, train, dtype=tf.float32,
-                 image_size=IMAGE_SIZE, cache=False):
+def create_split(dataset_builder, batch_size, train, start, end,
+                 dtype=tf.float32, image_size=IMAGE_SIZE, cache=False):
   """Creates a split from the ImageNet dataset using TensorFlow Datasets.
 
   Args:
@@ -187,15 +187,9 @@ def create_split(dataset_builder, batch_size, train, dtype=tf.float32,
     A `tf.data.Dataset`.
   """
   if train:
-    train_examples = dataset_builder.info.splits['train'].num_examples
-    split_size = train_examples // jax.process_count()
-    start = jax.process_index() * split_size
-    split = 'train[{}:{}]'.format(start, start + split_size)
+    split = 'train[{}:{}]'.format(start, end)
   else:
-    validate_examples = dataset_builder.info.splits['validation'].num_examples
-    split_size = validate_examples // jax.process_count()
-    start = jax.process_index() * split_size
-    split = 'validation[{}:{}]'.format(start, start + split_size)
+    split = 'validation[{}:{}]'.format(start, end)
 
   def decode_example(example):
     if train:
