@@ -168,6 +168,8 @@ def create_input_iter(dataset_builder, batch_size, image_size, dtype,
                       sharding_specs, physical_mesh, train, cache):
   dataset_name = dataset_builder.info.full_name.replace("/", ":")
 
+  print(sharding_specs)
+
   def input_iter_func(start, end, batch_size):
     import tensorflow as tf
     import tensorflow_datasets as tfds
@@ -262,7 +264,7 @@ def train_and_evaluate(config: ml_collections.ConfigDict,
   ray.init(address="auto")
   physical_mesh = alpa.DeviceCluster().get_physical_mesh()
   alpa.global_config.xla_client_mem_fraction = 0.89
-  alpa.global_config.default_autosharding_option.force_batch_dim_to_mesh_dim = 1
+  alpa.global_config.default_autosharding_option.allow_mixed_mesh_shape = True
   alpa.set_parallelize_options(physical_mesh)
 
   writer = metric_writers.create_default_writer(

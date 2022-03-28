@@ -89,17 +89,13 @@ def get_num_devices_for_whole_batch(sharding_spec, batch_dim=0):
         if isinstance(assignment, pxla.Replicated):
             num_devices *= assignment.replicas
 
-    sharding = sharding_spec.sharding[batch_dim]
-
     num_data_chunk = 1
-    if isinstance(sharding, pxla.Chunked):
-        num_data_chunk = np.prod(sharding.chunks)
 
-        # Assert the data chunk is mapped to the first dim of device mesh
-        for assignment in sharding_spec.mesh_mapping:
-            if isinstance(assignment, pxla.ShardedAxis):
-                assert assignment.axis == 0
-                break
+    sharding = sharding_spec.sharding[0]
+    assignment = sharding_spec.mesh_mapping[0]
+    if (batch_dim == 0 and isinstance(sharding, pxla.Chunked) and
+        isinstance(assignment, pxla.ShardedAxis) and assignment.axis == 0):
+        num_data_chunk = np.prod(sharding.chunks)
 
     return num_devices / num_data_chunk
 
