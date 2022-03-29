@@ -27,15 +27,9 @@ class Model(nn.Module):
 
 @partial(jax.pmap, axis_name="b")
 def train_step(state, batch):
-    def loss_func(params):
-        out = state.apply_fn(params, batch["x"], call_sum=True)
-        loss = jnp.mean((out - batch["y"])**2)
-        return loss
-
-    grads = jax.grad(loss_func)(state.params)
-    grads = jax.lax.pmean(grads, "b")
-    new_state = state.apply_gradients(grads=grads)
-    return new_state
+    out = state.apply_fn(params, batch["x"], call_sum=True)
+    loss = jnp.mean((out - batch["y"])**2)
+    return loss
 
 
 num_devices = len(jax.local_devices())
@@ -57,7 +51,7 @@ state = jax_utils.replicate(state)
 # Run
 ct = 0
 while True:
-    state = train_step(state, batch)
+    train_step(state, batch)
     if ct % 500 == 0:
         print(ct)
     ct += 1
