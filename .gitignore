@@ -45,4 +45,4 @@ docs/_build
 docs/tutorials
 
 # Example temp files
-examples/imagenet/imagenet
+examples/imagenet*/imagenet
