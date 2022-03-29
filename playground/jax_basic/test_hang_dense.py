@@ -1,6 +1,7 @@
 """Test auto sharding with convoluton nets."""
-from typing import Any
+from functools import partial
 
+from flax import jax_utils
 from flax import linen as nn
 from flax.training.train_state import TrainState
 import jax
@@ -8,39 +9,40 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 
-from alpa import parallelize
-from alpa.util import count_communication_primitives
-
-batch_size = 64
-hidden_size = 1024
+batch_size = 32
+hidden_size = 32
 use_bias = True
 
 
 class Model(nn.Module):
 
     @nn.compact
-    def __call__(self, x):
+    def __call__(self, x, call_sum=False):
         for i in range(10):
             x = nn.Dense(hidden_size, use_bias=use_bias)(x)
-            x += jnp.sum(x)
+            if call_sum:
+                x += jax.lax.psum(x, "b")
         return x
 
-@parallelize
+
+@partial(jax.pmap, axis_name="b")
 def train_step(state, batch):
     def loss_func(params):
-        out = state.apply_fn(params, batch["x"])
+        out = state.apply_fn(params, batch["x"], call_sum=True)
         loss = jnp.mean((out - batch["y"])**2)
         return loss
 
     grads = jax.grad(loss_func)(state.params)
+    grads = jax.lax.pmean(grads, "b")
     new_state = state.apply_gradients(grads=grads)
     return new_state
 
-batch = {
-    "x": jnp.ones((batch_size, hidden_size)),
-    "y": jnp.ones((batch_size, hidden_size))
-}
 
+num_devices = len(jax.local_devices())
+batch = {
+    "x": jnp.ones((num_devices, batch_size, hidden_size)),
+    "y": jnp.ones((num_devices, batch_size, hidden_size))
+}
 
 # Init train state
 model = Model()
@@ -50,18 +52,12 @@ tx = optax.sgd(0.1)
 state = TrainState.create(apply_fn=model.apply,
                           params=params,
                           tx=tx)
+state = jax_utils.replicate(state)
 
-executable = train_step.get_executable(state, batch)
-
-hlo_ir = executable.get_hlo_text()
-n_total, n_all_reduce, n_all_gather, n_reduce_scatter, _ = (
-    count_communication_primitives(hlo_ir))
-print(n_total, n_all_reduce)
-
-# JIT compile
+# Run
 ct = 0
 while True:
     state = train_step(state, batch)
-    if ct % 100 == 0:
+    if ct % 500 == 0:
         print(ct)
     ct += 1
