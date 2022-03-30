@@ -1,4 +1,3 @@
-"""Test auto sharding with convoluton nets."""
 from typing import Any
 
 from flax import linen as nn

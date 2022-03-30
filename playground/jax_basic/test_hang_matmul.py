@@ -1,4 +1,3 @@
-"""Test auto sharding with convoluton nets."""
 from functools import partial
 
 import jax
@@ -10,17 +9,15 @@ hidden_size = 128
 @partial(jax.pmap, axis_name="b")
 def train_step(params, x):
     out = x
-    for i in range(len(params)):
-        out = out @ params[i]
-        out += jax.lax.psum(x, "b")
+    for i in range(10):
+        out = out @ params
+        out += jax.lax.psum(out, "b")
     return out
 
 num_devices = len(jax.local_devices())
 
 x = jnp.ones((num_devices, batch_size, hidden_size))
-params = []
-for i in range(10):
-    params.append(jnp.ones((num_devices, hidden_size, hidden_size)))
+params = jnp.ones((num_devices, hidden_size, hidden_size))
 
 # Run
 ct = 0

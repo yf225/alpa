@@ -1,4 +1,3 @@
-"""Test auto sharding with convoluton nets."""
 from functools import partial
 
 from flax import jax_utils
