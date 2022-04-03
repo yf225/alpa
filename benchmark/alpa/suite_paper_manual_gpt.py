@@ -40,12 +40,11 @@ tmp_gpt_suite = {  # key = the number of gpus, value = a list of cases
 ],
 
 8: [
-    # 222 performance case. Ours: 37 TFLOPS. Megatron: 38 TFLOPS.
-    (32,  *gpt_specs["2.6B"],  2,   2,   1,   4,   2,  4,   False, *fixed_params),
+    (32,  *gpt_specs["1.3B"],  2,   2,   1,   4,   2,  4,   False, *fixed_params),
 ],
 
 16: [
-    (1024, *gpt_specs["6.7B"], 2,   1,   1,   2,   8,  256, True,  *fixed_params),
+    (128, *gpt_specs["2.6B"], 8,   1,   1,   8,   2,  4, True,  *fixed_params),
 ],
 
 32: [
