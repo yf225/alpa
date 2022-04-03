@@ -74,8 +74,12 @@ class MeshHostWorker:
         status = self.distributed_client.connect()
         logger.debug(
             f"{host_id}: Success to connect to xla runtime at {server_address}")
-        self.backend = xla_client.make_gpu_client(self.distributed_client,
-                                                  node_id=host_id)
+        if global_config.backend == "gpu":
+            self.backend = xla_client.make_gpu_client(self.distributed_client,
+                                                      node_id=host_id)
+        else:
+            raise NotImplementedError(
+                f"backend {global_config.backend} is not supported")
         # Monkey patch the backend
         self.local_devices = self.backend.local_devices()
         self.allgather_communicators = {}
@@ -1400,7 +1404,7 @@ class DeviceCluster:
         # Gather device info
         self.host_num_devices = []
         for host_info in self.host_info:
-            number = host_info["Resources"]["GPU"]
+            number = host_info["Resources"][global_config.ray_accelerator_name]
             assert number.is_integer()
             self.host_num_devices.append(int(number))
 

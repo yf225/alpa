@@ -354,7 +354,7 @@ class HloCostModelProfileWorker:
     """A ray actor to estimate the cost of HLO Proto based on cost model."""
 
     def __init__(self, prof_result, num_devices, num_micro_batches):
-        self.backend = xla_bridge.get_backend("gpu")
+        self.backend = xla_bridge.get_backend(global_config.backend)
         self.prof_result = prof_result
         self.num_devices = num_devices
         self.num_micro_batches = num_micro_batches
@@ -432,7 +432,8 @@ def compile_all(stages):
     """
     num_cpus = int(
         min(max(ray.available_resources()["CPU"] // 2, 1), len(stages)))
-    num_gpus = int(ray.available_resources()["GPU"])
+    num_gpus = int(
+        ray.available_resources()[global_config.ray_accelerator_name])
     default_autosharding_option = global_config.default_autosharding_option
 
     compile_workers = CompileWorkerPool(num_cpus, num_gpus)
@@ -471,7 +472,8 @@ def profile_all(stages, compiled_outputs: Sequence[CompileOutput], meshes,
     if global_config.use_hlo_cost_model:
         num_cpus = int(
             min(max(ray.available_resources()["CPU"] // 2, 1), len(stages)))
-        num_gpus = int(ray.available_resources()["GPU"])
+        num_gpus = int(
+            ray.available_resources()[global_config.ray_accelerator_name])
         mesh_num_devices = meshes[0].num_devices
         prof_database = ProfilingResultDatabase()
         prof_database.load(global_config.profiling_database_filename)
@@ -621,7 +623,7 @@ def generate_stage_info(all_layers,
                         insert_hook_after=None,
                         apply_grad_info=None):
     """Combine selected layers together for profiling."""
-    backend = xla_bridge.get_backend("gpu")
+    backend = xla_bridge.get_backend(global_config.backend)
 
     # TODO(yonghao): clean up code here
     (selected_donation_mapping, used_outside,

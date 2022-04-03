@@ -219,7 +219,7 @@ class NormalMeshDriverExecutable(MeshDriverExecutable):
             self.hlo_text = None  # will be fetched from the workers later
         else:
             assert isinstance(physical_mesh, LocalPhysicalDeviceMesh)
-            backend = xb.get_backend("gpu")
+            backend = xb.get_backend(global_config.backend)
             self.compiled = run_backend_compilation(backend, hlo_module,
                                                     strategy_config,
                                                     physical_mesh.num_devices)
@@ -321,8 +321,9 @@ class NormalMeshDriverExecutable(MeshDriverExecutable):
             costs = np.mean(costs, axis=0)
         else:
             assert isinstance(self.physical_mesh, LocalPhysicalDeviceMesh)
-            costs = profile_xla_executable(self.compiled, xb.get_backend("gpu"),
-                                           self.physical_mesh.devices)
+            costs = profile_xla_executable(
+                self.compiled, xb.get_backend(global_config.backend),
+                self.physical_mesh.devices)
         return costs
 
     def get_execution_time_costs(self, warmup):
@@ -570,7 +571,7 @@ class GradAccMeshDriverExecutable(MeshDriverExecutable):
             self.grad_sync_channel_ids = None  # TODO(lmzheng): fetch from the workers
         else:
             assert isinstance(physical_mesh, LocalPhysicalDeviceMesh)
-            backend = xb.get_backend("gpu")
+            backend = xb.get_backend(global_config.backend)
 
             self.accumulate_grad = run_backend_compilation(
                 backend, accumulate_grad, strategy_config,
@@ -909,7 +910,7 @@ class PartialGradAccMeshDriverExecutable(NormalMeshDriverExecutable):
             self.skip_allreduce_env_name = None
         else:
             assert isinstance(physical_mesh, LocalPhysicalDeviceMesh)
-            backend = xb.get_backend("gpu")
+            backend = xb.get_backend(global_config.backend)
             self.compiled = run_backend_compilation(backend, hlo_module,
                                                     strategy_config,
                                                     physical_mesh.num_devices)
@@ -996,8 +997,8 @@ class AllocZeroBufferDriverExecutable(MeshDriverExecutable):
         else:
             assert isinstance(physical_mesh, LocalPhysicalDeviceMesh)
             self.allocate_zero_buffers = compile_allocate_zero_buffers(
-                xb.get_backend("gpu"), physical_mesh.devices, grad_shard_shapes,
-                grad_shard_dtypes)
+                xb.get_backend(global_config.backend), physical_mesh.devices,
+                grad_shard_shapes, grad_shard_dtypes)
 
         self.timer_name = get_execution_timer_name(self.exec_uuid)
         self.sync_func = get_sync_func_driver(physical_mesh)

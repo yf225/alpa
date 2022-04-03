@@ -142,7 +142,7 @@ class XlaPipelineComputation(PipelineComputation):
             jax_pipeline_computation (JaxPipelineComputation): the source JaxPipelineComputation.
         """
         closed_jaxpr = jax_pipeline_computation.closed_jaxpr()
-        backend = xb.get_backend("gpu")
+        backend = xb.get_backend(global_config.backend)
         name = f"pipeline_computation_{jax_pipeline_computation.name}"
         built = jaxpr_to_hlo_computation(name, closed_jaxpr, None, backend)
 
@@ -159,8 +159,7 @@ class XlaPipelineComputation(PipelineComputation):
         xla_computation = xc.XlaComputation(self.hlo_proto)
         tuple_args = len(
             self.invars) > 100  # pass long arg lists as tuple for TPU
-        backend = 'gpu'
-        backend = xb.get_backend(backend)
+        backend = xb.get_backend(global_config.backend)
         device = backend.get_default_device_assignment(1)[0]
         options = get_compile_options(
             num_replicas=1,
@@ -203,8 +202,7 @@ class XlaShardedPipelineComputation(PipelineComputation):
     @classmethod
     def dummy_computation(cls, name, logical_mesh_shape, gensym_func):
         """Create a dummy computation."""
-        backend_name = 'gpu'
-        backend = xb.get_backend(backend_name)
+        backend = xb.get_backend(global_config.backend)
         strategy_config = StrategyConfig(global_config.build_random_seed,
                                          logical_mesh_shape, 1, 1, None, 0)
         compiled = compile_dummy_zero_constant(backend,
@@ -823,8 +821,7 @@ def generate_sharded_xla_computations_arguments(
     dummy_donated_invars = (True,) * donation_num + (False,) * (len(invars) -
                                                                 donation_num)
     closed_jaxpr = ClosedJaxpr(jaxpr, consts_dir.values())
-    backend_name = "gpu"
-    backend = xb.get_backend(backend_name)
+    backend = xb.get_backend(global_config.backend)
     built = jaxpr_to_hlo_computation(name, closed_jaxpr, dummy_donated_invars,
                                      backend)
     flops = xla_extension.hlo_module_count_flop_dot_conv_only(

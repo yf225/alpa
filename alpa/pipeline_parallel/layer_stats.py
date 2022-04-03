@@ -5,6 +5,8 @@ from jax import lax
 from jax.lib import xla_client as xc, xla_bridge as xb
 from jax.core import JaxprEqn, Var, CallPrimitive, DropVar, Literal
 from jax.interpreters import xla
+
+from alpa.global_env import global_config
 from alpa.util import OrderedSet
 
 
@@ -15,7 +17,7 @@ def call_to_xla_computation(eqn: JaxprEqn):
     """
     xe = xc._xla
     prim = eqn.primitive
-    backend = xb.get_backend("gpu")
+    backend = xb.get_backend(global_config.backend)
 
     c = xc.XlaBuilder(f"primitive_computation_{prim.name}")
 
@@ -58,8 +60,8 @@ def eqn_flops(eqn: JaxprEqn) -> float:
         xla_computation = xla.primitive_subcomputation(
             eqn.primitive, *map(lambda x: x.aval, eqn.invars), **eqn.params)
     hlo_module = xla_computation.as_hlo_module()
-    properties = xc._xla.hlo_module_cost_analysis(xb.get_backend("gpu"),
-                                                  hlo_module)
+    properties = xc._xla.hlo_module_cost_analysis(
+        xb.get_backend(global_config.backend), hlo_module)
     return properties["flops"] if "flops" in properties else 0.0
 
 

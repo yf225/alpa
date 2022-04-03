@@ -823,11 +823,12 @@ def xla_buffer_to_cupy(xla_buf, take_ownership=False):
 
 def cupy_to_xla_buffer(tensor):
     """Convert cupy tensors to XLA buffers."""
+    assert global_config.backend == "gpu"
     if isinstance(tensor, list):
         return list(map(cupy_to_xla_buffer, tensor))
     cpu_backend = xb.get_backend("cpu")
     try:
-        gpu_backend = xb.get_backend("gpu")
+        gpu_backend = xb.get_backend(global_config.backend)
     except RuntimeError:
         gpu_backend = None
     buf = xc._xla.dlpack_managed_tensor_to_buffer(tensor.toDlpack(),
@@ -890,7 +891,7 @@ def run_cmd(cmd: str):
 
 
 def list_gpu_info():
-    """List all gpu information by calling nvidia-sim."""
+    """List all gpu information by calling nvidia-smi."""
     ret = subprocess.getoutput("nvidia-smi -L")
     visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", None)
     if visible_devices:
@@ -918,8 +919,8 @@ def get_num_hosts_and_num_devices(args):
         else:
             ray.init(address="auto", namespace=get_ray_namespace_str())
             num_hosts = len(ray.nodes())
-            num_devices_per_host = int(
-                ray.cluster_resources()["GPU"]) // num_hosts
+            num_devices_per_host = int(ray.cluster_resources()[
+                global_config.ray_accelerator_name]) // num_hosts
     return num_hosts, num_devices_per_host
 
 

@@ -175,7 +175,7 @@ def shard_parallel_internal(
 
     # Convert jaxpr to XLA HLO
     name = f"{fun.__name__}_shard_parallel"
-    backend = xb.get_backend("gpu")
+    backend = xb.get_backend(global_config.backend)
     built = jaxpr_to_hlo_computation(name, ClosedJaxpr(jaxpr, consts),
                                      donated_invars, backend)
     flop_count = xla_extension.hlo_module_count_flop_dot_conv_only(
@@ -233,7 +233,7 @@ def shard_parallel_internal_gradient_accumulation(
     grad_avals = [x.aval for x in closed_jaxpr.jaxpr.invars[-num_grads:]]
 
     # Run auto-sharding and slice the combined HLO into two HLO: accumulate_grad and apply_grad
-    backend = xb.get_backend("gpu")
+    backend = xb.get_backend(global_config.backend)
     donated_invars = donated_invars + (False,) * num_grads
     name = f"{fun.__name__}_shard_parallel"
     built = jaxpr_to_hlo_computation(name, closed_jaxpr, donated_invars,

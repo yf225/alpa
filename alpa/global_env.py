@@ -54,6 +54,7 @@ class GlobalConfig:
 
     def __init__(self):
         ########## Options of both shard_parallel and pipeline_parallel ##########
+        self.backend = "gpu"
         self.devices = None
         self.strategy = "shard_parallel"
         self.memory_budget_per_device = None
@@ -133,11 +134,17 @@ class GlobalConfig:
             assert hasattr(self, k), k
             setattr(self, k, v)
 
+    @property
+    def ray_accelerator_name(self):
+        backend_dict = {"gpu": "GPU"}
+        return backend_dict[self.backend]
+
 
 global_config = GlobalConfig()
 
 
 def set_parallelize_options(
+        backend="gpu",
         devices=None,
         strategy: str = "shard_parallel",
         memory_budget_per_device: Optional[float] = None,
@@ -199,6 +206,7 @@ def set_parallelize_options(
     """
     global global_config
 
+    global_config.backend = backend
     global_config.devices = devices
     global_config.strategy = strategy
     global_config.memory_budget_per_device = memory_budget_per_device
