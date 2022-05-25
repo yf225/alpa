@@ -28,3 +28,8 @@ from . import pipeline_parallel
 from . import shard_parallel
 from . import timer
 from . import util
+
+try:
+    from . import torch
+except ImportError:
+    pass
