@@ -231,3 +231,15 @@ def value_and_grad(*args, **kwargs):
         return mark_gradient((val, ggrad))
 
     return ret
+
+
+def grad_and_value(*args, **kwargs):
+    """The same implementation as alpa.value_and_grad, but puts grad first and value second in output.
+    """
+
+    def ret(*call_args, **call_kwargs):
+        func = api.value_and_grad(*args, **kwargs)
+        val, ggrad = func(*call_args, **call_kwargs)
+        return mark_gradient((ggrad, val))
+
+    return ret
