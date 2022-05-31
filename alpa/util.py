@@ -631,6 +631,7 @@ def trace_jaxpr_with_micro_batch(fun, batch_invars, num_micro_batches,
     with jax.disable_jit():
         jaxpr, _, consts = pe.trace_to_jaxpr_final(fun, avals)
     closed_jaxpr = ClosedJaxpr(jaxpr, consts)
+    print(f"closed_jaxpr: {closed_jaxpr}")
     return closed_jaxpr, avals, batch_size
 
 

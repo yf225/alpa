@@ -1,0 +1,118 @@
+export USERNAME=willfeng # replace with your_linux_name_on_this_cluster>
+
+export HOME_DIR=/fsx/users/${USERNAME}
+cd ${HOME_DIR}
+
+# Install conda as needed: https://docs.conda.io/en/latest/miniconda.html
+conda create -y -n torch_nightly python=3.8
+conda activate torch_nightly
+
+git clone --recursive https://github.com/yf225/alpa -b pt
+
+# ILP Solver
+conda install -y -c conda-forge pulp  # has COIN_CMD
+
+export CUDA_VER_SHORT=114
+export CUDA_VER=11.4
+
+module unload cuda
+module unload nccl
+module unload nccl_efa
+module load cuda/${CUDA_VER}
+module load nccl/2.12.7-cuda.${CUDA_VER}
+module load nccl_efa/1.2.0-nccl.2.12.7-cuda.${CUDA_VER}
+
+export CUDA_HOME=/usr/local/cuda-${CUDA_VER}
+export TF_PATH=${HOME_DIR}/alpa/third_party/tensorflow-alpa
+export PATH=${CUDA_HOME}/bin:$PATH
+export LD_LIBRARY_PATH=${CUDA_HOME}:${CUDA_HOME}/lib:${CUDA_HOME}/lib64:${CUDA_HOME}/targets/x86_64-linux/lib:${CUDA_HOME}/extras/CUPTI/lib64:$LD_LIBRARY_PATH
+export CFLAGS=-I${CUDA_HOME}/include  # This helps CuPy find the right NCCL version
+export LDFLAGS=-L${CUDA_HOME}/lib  # This helps CuPy find the right NCCL version
+export TF_NEED_CUDA=1
+export TF_CUDA_VERSION=${CUDA_VER}
+export TF_CUDNN_VERSION=8
+export TF_CUDA_PATHS=${CUDA_HOME}
+export CUDA_TOOLKIT_PATH=${CUDA_HOME}
+export CUDNN_INSTALL_PATH=${CUDA_HOME}
+
+# Python packages:
+pip3 install cmake tqdm numpy scipy numba pybind11 ray pulp tensorstore flax==0.4.1 jax==0.3.5
+pip3 uninstall -y cupy-cuda110
+pip3 uninstall -y cupy-cuda111
+pip3 uninstall -y cupy-cuda112
+pip3 uninstall -y cupy-cuda113
+pip3 uninstall -y cupy-cuda114
+rm -rf $HOME_DIR/.cupy/cuda_lib/11.0/
+rm -rf $HOME_DIR/.cupy/cuda_lib/11.1/
+rm -rf $HOME_DIR/.cupy/cuda_lib/11.2/
+rm -rf $HOME_DIR/.cupy/cuda_lib/11.3/
+rm -rf $HOME_DIR/.cupy/cuda_lib/11.4/
+CUDA_PATH=${CUDA_HOME} pip3 install cupy-cuda${CUDA_VER_SHORT}   # use your own CUDA version
+# Check whether NCCL is install.
+# If prints some instruction, follow it.
+python3 -c "from cupy.cuda import nccl; print(nccl.get_version())"
+
+# Build and install jaxlib
+pip3 uninstall -y jaxlib
+mv ~/.cache/bazel ~/.cache/bazel_tmp
+rm -rf /scratch/tmp  # or, use a new tmp folder (like "tmp9")
+cd ${HOME_DIR}/alpa/build_jaxlib
+# NOTE: after "INFO: Found applicable config definition build:posix in file ..."
+# It might take ~30 secs for new output to show up.
+TMP=/scratch/tmp/ \
+TEST_TMPDIR=/scratch/tmp/bazel/ \
+python3 build/build.py \
+--enable_cuda --dev_install --tf_path=$TF_PATH \
+--cuda_path=/usr/local/cuda-${CUDA_VER} \
+--cudnn_path=/usr/local/cuda-${CUDA_VER} \
+--cuda_version=${CUDA_VER}
+cd dist
+pip3 install -e .
+
+# Install Alpa
+cd ${HOME_DIR}/alpa
+pip3 install -e .
+
+# Build XLA pipeline marker custom call
+cd ${HOME_DIR}/alpa/alpa/pipeline_parallel/xla_custom_call_marker
+git clean -xdf
+bash build.sh
+cd ${HOME_DIR}/alpa
+
+# On GPU node, test:
+ray start --head
+python3 tests/test_install.py
+
+# Install torch and torchdistx
+pip3 uninstall -y torch torchdistx
+pip install torchdistx --pre --extra-index-url https://download.pytorch.org/whl/nightly/cpu  # cpu is sufficient
+
+# Build torchdynamo from source
+cd ${HOME_DIR}
+rm -rf ${HOME_DIR}/torchdynamo
+git clone https://github.com/facebookresearch/torchdynamo
+cd ${HOME_DIR}/torchdynamo
+git pull origin main
+pip install -r requirements.txt
+python3 setup.py install
+
+# Build functorch from source
+cd ${HOME_DIR}
+rm -rf ${HOME_DIR}/functorch
+git clone https://github.com/pytorch/functorch
+cd ${HOME_DIR}/functorch
+git pull origin main
+python3 setup.py install
+
+# Install pycls
+pip3 install iopath yacs submitit simplejson fvcore
+cd ${HOME_DIR}
+git clone https://github.com/facebookresearch/pycls
+git pull origin main
+cd ${HOME_DIR}/pycls
+
+# Install timm
+cd ${HOME_DIR}
+git clone https://github.com/rwightman/pytorch-image-models
+git pull origin main
+cd ${HOME_DIR}/pytorch-image-models

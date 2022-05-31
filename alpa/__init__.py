@@ -1,4 +1,4 @@
-from alpa.api import (init, shutdown, parallelize, grad, value_and_grad,
+from alpa.api import (init, shutdown, parallelize, grad, value_and_grad, grad_and_value,
                       clear_executable_cache, set_parallelize_options)
 from alpa.data_loader import DataLoader, MeshDriverDataLoader
 from alpa.device_mesh import (DeviceCluster, PhysicalDeviceMesh,
@@ -29,3 +29,8 @@ from . import pipeline_parallel
 from . import shard_parallel
 from . import timer
 from . import util
+
+try:
+    from . import torch
+except ImportError:
+    pass
