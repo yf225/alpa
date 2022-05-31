@@ -54,6 +54,7 @@ def compile_pipeshard_executable(fun: lu.WrappedFun,
     # Trace the function to get the jaxpr
     closed_jaxpr, _, batch_size = trace_jaxpr_with_micro_batch(
         fun, batch_invars, num_microbatch, avals)
+
     gensym_func = gensym([closed_jaxpr.jaxpr])
     debug_compilation_time("trace")
 

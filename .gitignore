@@ -55,3 +55,7 @@ docs/tutorials
 
 # Example temp files
 examples/imagenet/imagenet
+
+.DS_Store
+
+.ipynb_checkpoints

@@ -645,6 +645,8 @@ def cluster_layers_and_slice_mesh(
             num_stages = num_layers
 
             assert num_devices >= num_stages, "No enough devices"
+            print(f"num_devices: {num_devices}")
+            print(f"num_stages: {num_stages}")
             assert num_devices % num_stages == 0
             num_devices_per_mesh = num_devices // num_stages
             if num_devices_per_mesh > virtual_mesh.num_devices_per_host:
