@@ -81,7 +81,7 @@ install_require_list = [
     "flax==0.4.1",
     "pulp",
     "tensorstore",
-    "numpy<1.22",
+    "numpy",
     "numba",
 ]
 
