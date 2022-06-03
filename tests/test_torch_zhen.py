@@ -431,50 +431,68 @@ def weight_init_func(pt_module, name_map, params, bufs):
     return params, bufs
 
 
-class TorchZHENTest(unittest.TestCase):
-    def test_zhen_homogeneous(self):
-        B=59
-        F=37
-        D=64
-        LAYERS=5
-        OUTPUT_PER_ENSEMBLE=50
-        TOKENS=[TokenMixer.ATTENTION, TokenMixer.LINEAR, TokenMixer.ATTENTION, TokenMixer.CONVOLUTION, TokenMixer.DOT]
+# class TorchZHENTest(unittest.TestCase):
+#     def test_zhen_homogeneous(self):
+#         B=59
+#         F=37
+#         D=64
+#         LAYERS=5
+#         OUTPUT_PER_ENSEMBLE=50
+#         TOKENS=[TokenMixer.ATTENTION, TokenMixer.LINEAR, TokenMixer.ATTENTION, TokenMixer.CONVOLUTION, TokenMixer.DOT]
 
-        # `meta_init` allows a PyTorch model to be created with shape-only tensors as weights.
-        pt_module = atorch.meta_init(ZHENCollection, LAYERS, D, TOKENS, F, OUTPUT_PER_ENSEMBLE)
+#         # `meta_init` allows a PyTorch model to be created with shape-only tensors as weights.
+#         pt_module = atorch.meta_init(ZHENCollection, LAYERS, D, TOKENS, F, OUTPUT_PER_ENSEMBLE)
 
-        dataloader = [
-            (torch.empty(B, D, F), torch.empty(B, 16000)),
-            (torch.empty(B, D, F), torch.empty(B, 16000)),
-        ]
+#         dataloader = [
+#             (torch.empty(B, D, F), torch.empty(B, 16000)),
+#             (torch.empty(B, D, F), torch.empty(B, 16000)),
+#         ]
 
-        train_torch_module(pt_module, weight_init_func, dataloader)
+#         train_torch_module(pt_module, weight_init_func, dataloader)
 
-    def test_zhen_heterogeneous(self):
-        B=59
-        F=37
-        D=64
-        OUTPUT_PER_ENSEMBLE=50
-        TOKENS=[[TokenMixer.ATTENTION, TokenMixer.LINEAR], [TokenMixer.ATTENTION, TokenMixer.CONVOLUTION, TokenMixer.DOT], [TokenMixer.LINEAR, TokenMixer.DOT]] # 3-layer ZHEN
+#     def test_zhen_heterogeneous(self):
+#         B=59
+#         F=37
+#         D=64
+#         OUTPUT_PER_ENSEMBLE=50
+#         TOKENS=[[TokenMixer.ATTENTION, TokenMixer.LINEAR], [TokenMixer.ATTENTION, TokenMixer.CONVOLUTION, TokenMixer.DOT], [TokenMixer.LINEAR, TokenMixer.DOT]] # 3-layer ZHEN
 
-        # `meta_init` allows a PyTorch model to be created with shape-only tensors as weights.
-        pt_module = atorch.meta_init(ZHENCollection, len(TOKENS), D, TOKENS, F, OUTPUT_PER_ENSEMBLE)
+#         # `meta_init` allows a PyTorch model to be created with shape-only tensors as weights.
+#         pt_module = atorch.meta_init(ZHENCollection, len(TOKENS), D, TOKENS, F, OUTPUT_PER_ENSEMBLE)
 
-        dataloader = [
-            (torch.empty(B, D, F), torch.empty(B, 6400)),
-            (torch.empty(B, D, F), torch.empty(B, 6400)),
-        ]
+#         dataloader = [
+#             (torch.empty(B, D, F), torch.empty(B, 6400)),
+#             (torch.empty(B, D, F), torch.empty(B, 6400)),
+#         ]
 
-        train_torch_module(pt_module, weight_init_func, dataloader)
-
-
-def suite():
-    suite = unittest.TestSuite()
-    suite.addTest(TorchZHENTest("test_zhen_homogeneous"))
-    suite.addTest(TorchZHENTest("test_zhen_heterogeneous"))
-    return suite
+#         train_torch_module(pt_module, weight_init_func, dataloader)
 
 
-if __name__ == '__main__':
-    runner = unittest.TextTestRunner()
-    runner.run(suite())
+# def suite():
+#     suite = unittest.TestSuite()
+#     suite.addTest(TorchZHENTest("test_zhen_homogeneous"))
+#     suite.addTest(TorchZHENTest("test_zhen_heterogeneous"))
+#     return suite
+
+
+# if __name__ == '__main__':
+#     runner = unittest.TextTestRunner()
+#     runner.run(suite())
+
+
+B=59
+F=37
+D=64
+LAYERS=5
+OUTPUT_PER_ENSEMBLE=50
+TOKENS=[TokenMixer.ATTENTION, TokenMixer.LINEAR, TokenMixer.ATTENTION, TokenMixer.CONVOLUTION, TokenMixer.DOT]
+
+# `meta_init` allows a PyTorch model to be created with shape-only tensors as weights.
+pt_module = atorch.meta_init(ZHENCollection, LAYERS, D, TOKENS, F, OUTPUT_PER_ENSEMBLE)
+
+dataloader = [
+    (torch.empty(B, D, F), torch.empty(B, 16000)),
+    (torch.empty(B, D, F), torch.empty(B, 16000)),
+]
+
+train_torch_module(pt_module, weight_init_func, dataloader)

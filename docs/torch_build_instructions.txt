@@ -8,6 +8,7 @@ conda create -y -n torch_nightly python=3.8
 conda activate torch_nightly
 
 git clone --recursive https://github.com/alpa-projects/alpa
+# git clone --recursive https://github.com/yf225/alpa -b pt
 
 # ILP Solver
 conda install -y -c conda-forge pulp  # has COIN_CMD
@@ -36,7 +37,7 @@ export CUDA_TOOLKIT_PATH=${CUDA_HOME}
 export CUDNN_INSTALL_PATH=${CUDA_HOME}
 
 # Python packages:
-pip3 install -U cmake tqdm numpy scipy numba pybind11 ray pulp tensorstore flax==0.4.1 jax==0.3.5
+pip3 install -U cmake tqdm "numpy<1.22" scipy numba pybind11 ray pulp tensorstore flax==0.4.1 jax==0.3.5
 pip3 uninstall -y cupy-cuda110
 pip3 uninstall -y cupy-cuda111
 pip3 uninstall -y cupy-cuda112
@@ -54,8 +55,6 @@ python3 -c "from cupy.cuda import nccl; print(nccl.get_version())"
 
 # Build and install jaxlib
 pip3 uninstall -y jaxlib
-mv ~/.cache/bazel ~/.cache/bazel_tmp
-rm -rf /scratch/tmp  # or, use a new tmp folder (like "tmp9")
 cd ${HOME_DIR}/alpa/build_jaxlib
 # NOTE: after "INFO: Found applicable config definition build:posix in file ..."
 # It might take ~30 secs for new output to show up.
