@@ -16,7 +16,7 @@ class MyModule(torch.nn.Module):
     def forward(self, x):
         x = self.linear1(x)
         # do some debugging when in local mode
-        if alpa.torch.mode() == "local":
+        if atorch.mode() == "local":
             print(x)
         x = self.linear2(x)
         x = self.linear3(x)
@@ -25,13 +25,6 @@ class MyModule(torch.nn.Module):
 
 
 def weight_init_func(pt_module, name_map, params, bufs):
-    # First, materialize all weights to zero
-    for k, p in pt_module.named_parameters():
-        params[name_map[f"{k}"]] = atorch.zeros_like(params[name_map[f"{k}"]])
-    for k, b in pt_module.named_buffers():
-        bufs[name_map[f"{k}"]] = atorch.zeros_like(bufs[name_map[f"{k}"]])
-
-    # Then, selectively initialize some weights to a different value
     for k, m in pt_module.named_modules():
         if isinstance(m, torch.nn.Linear):
             params[name_map[f"{k}.weight"]] = torch.nn.init.xavier_uniform(params[name_map[f"{k}.weight"]])
@@ -42,7 +35,7 @@ def weight_init_func(pt_module, name_map, params, bufs):
 class TorchSimpleTest(unittest.TestCase):
     def test_simple(self):
         # `meta_init` allows a PyTorch model to be created with shape-only tensors as weights.
-        pt_module = alpa.torch.meta_init(MyModule)
+        pt_module = atorch.meta_init(MyModule)
 
         dataloader = [
             (torch.randn(8, 16), torch.randn(8, 16)),

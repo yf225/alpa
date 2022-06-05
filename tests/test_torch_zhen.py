@@ -417,13 +417,6 @@ class ZHENCollection(nn.Module):
 
 
 def weight_init_func(pt_module, name_map, params, bufs):
-    # First, materialize all weights to zero
-    for k, p in pt_module.named_parameters():
-        params[name_map[f"{k}"]] = atorch.zeros_like(params[name_map[f"{k}"]])
-    for k, b in pt_module.named_buffers():
-        bufs[name_map[f"{k}"]] = atorch.zeros_like(bufs[name_map[f"{k}"]])
-
-    # # Then, selectively initialize some weights to a different value
     # for k, m in pt_module.named_modules():
     #     if isinstance(m, torch.nn.Linear):
     #         params[name_map[f"{k}.weight"]] = torch.nn.init.xavier_uniform(params[name_map[f"{k}.weight"]])
@@ -448,7 +441,12 @@ class TorchZHENTest(unittest.TestCase):
             (torch.empty(B, D, F), torch.empty(B, 15360)),
         ]
 
+        _xla_client_mem_fraction_orig_value = alpa.global_config.xla_client_mem_fraction
+        alpa.global_config.xla_client_mem_fraction = 0.7
+
         train_torch_module(pt_module, weight_init_func, dataloader)
+
+        alpa.global_config.xla_client_mem_fraction = _xla_client_mem_fraction_orig_value
 
     def test_zhen_heterogeneous(self):
         B=64
@@ -465,7 +463,12 @@ class TorchZHENTest(unittest.TestCase):
             (torch.empty(B, D, F), torch.empty(B, 6144)),
         ]
 
+        _xla_client_mem_fraction_orig_value = alpa.global_config.xla_client_mem_fraction
+        alpa.global_config.xla_client_mem_fraction = 0.7
+
         train_torch_module(pt_module, weight_init_func, dataloader)
+
+        alpa.global_config.xla_client_mem_fraction = _xla_client_mem_fraction_orig_value
 
 
 def suite():

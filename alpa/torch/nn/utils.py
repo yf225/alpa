@@ -10,9 +10,11 @@ import functools
 import itertools
 import math
 import operator
+from typing import List
 
 import torch
 from torch import nn
+from torch import Tensor
 from torch.fx import Transformer
 from torch.fx.experimental.normalize import NormalizeOperators
 from torch.fx.operator_schemas import get_signature_for_torch_op
@@ -426,6 +428,18 @@ def create_names_map(named_params, tied_named_params):
     return result
 
 
+def _set_nested_attr(obj: nn.Module, names: List[str], value: Tensor) -> None:
+    """
+    Set the attribute specified by the given list of names to value.
+    For example, to set the attribute obj.conv.weight,
+    use _del_nested_attr(obj, ['conv', 'weight'], value)
+    """
+    if len(names) == 1:
+        setattr(obj, names[0], value)
+    else:
+        _set_nested_attr(getattr(obj, names[0]), names[1:], value)
+
+
 def _extract_members(mod: nn.Module, _named_members, named_members, subclass):
     all_named_members = tuple(_named_members(mod, remove_duplicate=False))
     named_members = tuple(named_members())
@@ -455,40 +469,42 @@ def extract_weights(mod: nn.Module):
     Note that this function modifies the model in place and after this
     call, mod.parameters() will be empty.
     """
-    return _extract_members(mod, _named_parameters, mod.named_parameters, nn.Parameter)
+    return _extract_members(mod, named_parameters, mod.named_parameters, nn.Parameter)
 
 
 def extract_buffers(mod: nn.Module):
-    return _extract_members(mod, _named_buffers, mod.named_buffers, lambda x: x)
+    return _extract_members(mod, named_buffers, mod.named_buffers, lambda x: x)
 
 
 # Copied from functorch/functorch/_src/named_members_polyfill.py
-def named_members(mod, get_members_fn, prefix="", recurse=True):
+def named_members(mod, get_members_fn, prefix='', recurse=True, remove_duplicate=True):
     r"""Helper method for yielding various names + members of modules."""
     memo = set()
-    modules = mod.named_modules(prefix=prefix, remove_duplicate=False) if recurse else [(prefix, mod)]
+    modules = mod.named_modules(prefix=prefix, remove_duplicate=remove_duplicate) if recurse else [(prefix, mod)]
     for module_prefix, module in modules:
         members = get_members_fn(module)
         for k, v in members:
             if v is None or v in memo:
                 continue
-            if v in memo:
-                raise ValueError(
-                    f"Weight-sharing is not supported by Alpa, but we found duplicated parameter / buffer in model: {k}"
-                )
-            else:
+            if remove_duplicate:
                 memo.add(v)
-            name = module_prefix + ("." if module_prefix else "") + k
+            name = module_prefix + ('.' if module_prefix else '') + k
             yield name, v
 
 
-def named_parameters(mod, prefix: str = "", recurse: bool = True):
-    gen = named_members(mod, lambda module: module._parameters.items(), prefix=prefix, recurse=recurse)
+def named_parameters(mod, prefix: str = '', recurse: bool = True, remove_duplicate: bool = True):
+    gen = named_members(
+        mod,
+        lambda module: module._parameters.items(),
+        prefix=prefix, recurse=recurse, remove_duplicate=remove_duplicate)
     for elem in gen:
         yield elem
 
 
-def named_buffers(mod, prefix: str = "", recurse: bool = True):
-    gen = named_members(mod, lambda module: module._buffers.items(), prefix=prefix, recurse=recurse)
+def named_buffers(mod, prefix: str = '', recurse: bool = True, remove_duplicate: bool = True):
+    gen = named_members(
+        mod,
+        lambda module: module._buffers.items(),
+        prefix=prefix, recurse=recurse, remove_duplicate=remove_duplicate)
     for elem in gen:
         yield elem
