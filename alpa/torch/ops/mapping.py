@@ -8,36 +8,36 @@ from jax import lax
 import torch
 import alpa
 import alpa.torch as atorch
-from alpa.torch.ops.utils import infer_size, is_torch_tensor_type
+from alpa.torch.ops.utils import infer_size
 from alpa.torch.utils import array_init_like
 
 
 def torch_add(x, other):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.add"](x, other)
     return jnp.add(x, other)
 
 
 def torch_bmm(x, mat2):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.bmm"](x, mat2)
     return lax.batch_matmul(x, mat2)
 
 
 def torch_cat(tensors, dim=0):
-    if is_torch_tensor_type(tensors[0]):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.cat"](tensors, dim=dim)
     return lax.concatenate(tensors, dim)
 
 
 def torch_clone(x, memory_format=torch.preserve_format):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.clone"](x, memory_format=memory_format)
     return jnp.array(x, dtype=x.dtype, copy=True, order="K")
 
 
 def torch_conv2d(x, weight, bias=None, stride=1, padding=0, dilation=1, groups=1):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.conv2d"](
             x, weight, bias=bias, stride=stride, padding=padding, dilation=dilation, groups=groups
         )
@@ -68,7 +68,7 @@ def torch_conv2d(x, weight, bias=None, stride=1, padding=0, dilation=1, groups=1
 
 
 def torch_div(x, other, rounding_mode=None):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.div"](x, other, rounding_mode=rounding_mode)
     ret = None
     if rounding_mode is None:
@@ -84,13 +84,13 @@ def torch_div(x, other, rounding_mode=None):
 
 
 def torch_exp(x):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.exp"](x)
     return jnp.exp(x)
 
 
 def torch_expand(x, sizes):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.expand"](x, sizes)
     computed_sizes = list(sizes)
     for dim, size in enumerate(sizes):
@@ -100,63 +100,63 @@ def torch_expand(x, sizes):
 
 
 def torch_gelu(x, approximate=False):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.gelu"](x, approximate=approximate)
     # TODO: use approximate=True or not?
     return jax.nn.gelu(x)
 
 
 def torch_matmul(x, other):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.matmul"](x, other)
     return jnp.matmul(x, other)
 
 
 def torch_max(x, dim=None, keepdim=False):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.max"](x, dim=dim, keepdim=keepdim)
     return jnp.max(x, axis=dim, keepdims=keepdim)
 
 
 def torch_mean(x, dim=None, keepdim=False):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.mean"](x, dim=dim, keepdim=keepdim)
     return jnp.mean(x, axis=dim, keepdims=keepdim)
 
 
 def torch_mm(x, mat2):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.mm"](x, mat2)
     return jnp.matmul(x, mat2)
 
 
 def torch_mul(x1, x2):
-    if is_torch_tensor_type(x1):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.mul"](x1, x2)
     return jnp.multiply(x1, x2)
 
 
 def torch_permute(x, dims):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.permute"](x, dims)
     return jnp.transpose(x, dims)
 
 
 def torch_pow(x, exponent):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.pow"](x, exponent)
     return jnp.power(x, exponent)
 
 
 def torch_select(x, dim, index):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.select"](x, dim, index)
     # TODO: likely inefficient. What's the better way?
     return lax.slice_in_dim(x, index, index + 1, stride=1, axis=dim)[0]
 
 
 def torch_slice(x, dim, start, end, step=1):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.slice"](x, dim, start, end, step=step)
     if end > x.shape[dim]:
         end = x.shape[dim]
@@ -164,7 +164,7 @@ def torch_slice(x, dim, start, end, step=1):
 
 
 def torch_split(x, split_size_or_sections, dim=0):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.split"](x, split_size_or_sections, dim=dim)
     if isinstance(split_size_or_sections, int):
         split_size = split_size_or_sections
@@ -176,37 +176,37 @@ def torch_split(x, split_size_or_sections, dim=0):
 
 
 def torch_sqrt(x):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.sqrt"](x)
     return jnp.sqrt(x)
 
 
 def torch_sub(x, other, alpha=1):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.sub"](x, other, alpha=alpha)
     return x - alpha * other
 
 
 def torch_sum(x, dim, keepdim=False):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.sum"](x, dim, keepdim=keepdim)
     return jnp.sum(x, axis=dim, keepdims=keepdim)
 
 
 def torch_t(x):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.t"](x)
     return jnp.transpose(x)
 
 
 def torch_transpose(x, dim0, dim1):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.transpose"](x, dim0, dim1)
     return jnp.swapaxes(x, dim0, dim1)
 
 
 def torch_unbind(x, dim=0):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.unbind"](x, dim=dim)
     ret = []
     for index in range(x.shape[dim]):
@@ -216,13 +216,13 @@ def torch_unbind(x, dim=0):
 
 
 def torch_view(x, shape):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.view"](x, shape)
     return lax.reshape(x, infer_size(shape, x.size))
 
 
 def torch_softmax(x, dim):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.softmax"](x, dim)
     x_max = jnp.max(x, axis=dim, keepdims=True)[0]
     unnormalized = jnp.exp(x - x_max)
@@ -230,13 +230,13 @@ def torch_softmax(x, dim):
 
 
 def torch_nn_functional_softmax(x, dim):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.nn.functional.softmax"](x, dim)
     return torch_softmax(x=x, dim=dim)
 
 
 def torch_dropout(x, p=0.5, training=True, inplace=False):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.dropout"](x, p=p, training=training, inplace=inplace)
     assert not inplace, "Inplace dropout is not supported"
     if p == 0.0:
@@ -252,13 +252,13 @@ def torch_dropout(x, p=0.5, training=True, inplace=False):
 
 
 def torch_nn_functional_dropout(x, p=0.5, training=True, inplace=False):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.nn.functional.dropout"](x, p=p, training=training, inplace=inplace)
     return torch_dropout(x, p=p, training=training, inplace=inplace)
 
 
 def torch_abs(x):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.abs"](x)
     return jnp.absolute(x)
 
@@ -292,7 +292,7 @@ def torch_batch_norm(
     momentum: float = 0.1,
     eps: float = 1e-5,
 ):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.batch_norm"](
             running_mean, running_var, weight=weight, bias=bias, training=training, momentum=momentum, eps=eps,
         )
@@ -341,7 +341,7 @@ def torch_batch_norm(
 
 
 def torch_relu(x):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.relu"](x)
     return jax.nn.relu(x)
 
@@ -359,7 +359,7 @@ def maybe_wrap_dim(dim: int, dim_post_expr: int, wrap_scalar: bool = True):
 
 
 def torch_flatten(x, start_dim=0, end_dim=-1):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.flatten"](x, start_dim=start_dim, end_dim=end_dim)
     input_shape = x.shape
     start_dim = maybe_wrap_dim(start_dim, len(input_shape))
@@ -380,7 +380,7 @@ def torch_flatten(x, start_dim=0, end_dim=-1):
 
 
 def torch_addmm(x, mat1, mat2, beta=1, alpha=1):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.addmm"](x, mat1, mat2, beta=beta, alpha=alpha)
     out = alpha * torch.matmul(mat1, mat2)
     if beta == 0:
@@ -389,7 +389,7 @@ def torch_addmm(x, mat1, mat2, beta=1, alpha=1):
 
 
 def torch_layer_norm(x, normalized_shape, weight=None, bias=None, eps=1e-05, cudnn_enable=True):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.layer_norm"](
             x, normalized_shape, weight=weight, bias=bias, eps=eps, cudnn_enable=cudnn_enable
         )
@@ -415,7 +415,7 @@ def torch_nn_functional_batch_norm(
     momentum: float = 0.1,
     eps: float = 1e-5,
 ):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.nn.functional.batch_norm"](
             running_mean, running_var, weight=weight, bias=bias, training=training, momentum=momentum, eps=eps,
         )
@@ -438,7 +438,7 @@ def torch_nn_functional_mse_loss(
     reduce: Optional[bool] = None,
     reduction: str = "mean",
 ):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.nn.functional.mse_loss"](
             x, target, size_average=size_average, reduce=reduce, reduction=reduction,
         )
@@ -447,7 +447,7 @@ def torch_nn_functional_mse_loss(
 
 
 def torch_nn_functional_linear(x, weight, bias=None):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.nn.functional.linear"](x, weight, bias=bias)
     output = torch.matmul(x, torch.t(weight))
     if bias is not None:
@@ -475,7 +475,7 @@ def _calculate_fan_in_and_fan_out(tensor):
 
 
 def torch_nn_init_xavier_uniform(x, gain: float = 1.0):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.nn.init.xavier_uniform"](x, gain=gain)
     fan_in, fan_out = _calculate_fan_in_and_fan_out(x)
     std = gain * math.sqrt(2.0 / float(fan_in + fan_out))
@@ -490,7 +490,7 @@ def torch_nn_init_xavier_uniform(x, gain: float = 1.0):
 
 
 def torch_nn_init_normal(x, mean: float = 0.0, std: float = 1.0):
-    if is_torch_tensor_type(x):
+    if atorch.mode() == "local":
         return op_orig_impl_dict["torch.nn.init.normal"](x, mean=mean, std=std)
 
     def gen_normal(rng, shape, dtype, **kwargs):
@@ -503,10 +503,8 @@ def torch_nn_init_normal(x, mean: float = 0.0, std: float = 1.0):
 
 def alpa_automatic_layer_construction(fun=None, **kwargs):
     if atorch.mode() == "local":
-
         def decorate_fun(fun):
             return fun
-
         if fun is None:
             return decorate_fun
         else:
@@ -584,14 +582,16 @@ def unpatch_ops():
 
 
 @contextlib.contextmanager
-def bind_ops():
+def bind_ops(enabled=True):
     """
     Context manager within which many PyTorch ops are monkey-patched to also accept Alpa arrays.
 
     Also disable the `alpa.automatic_layer_construction()` API in local mode.
     """
-    patch_ops()
+    if enabled:
+        patch_ops()
     try:
         yield
     finally:
-        unpatch_ops()
+        if enabled:
+            unpatch_ops()

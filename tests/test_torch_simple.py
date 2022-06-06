@@ -25,13 +25,6 @@ class MyModule(torch.nn.Module):
 
 
 def weight_init_func(pt_module, name_map, params, bufs):
-    # First, materialize all weights to zero
-    for k, p in pt_module.named_parameters():
-        params[name_map[f"{k}"]] = atorch.zeros_like(params[name_map[f"{k}"]])
-    for k, b in pt_module.named_buffers():
-        bufs[name_map[f"{k}"]] = atorch.zeros_like(bufs[name_map[f"{k}"]])
-
-    # Then, selectively initialize some weights to a different value
     for k, m in pt_module.named_modules():
         if isinstance(m, torch.nn.Linear):
             params[name_map[f"{k}.weight"]] = torch.nn.init.xavier_uniform(params[name_map[f"{k}.weight"]])
