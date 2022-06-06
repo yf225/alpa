@@ -92,7 +92,7 @@ def train_torch_module(pt_module, weight_init_func, dataloader):
 
         train_func = functools.partial(sgd_train_func, module_func, loss_func, optim_func)
 
-        if alpa.torch.mode() == "dist":
+        if atorch.mode() == "dist":
             parallel_method = alpa.PipeshardParallel(stage_mode="auto", num_micro_batches=num_micro_batches)
             # parallel_method = alpa.PipeshardParallel(stage_mode="auto", num_micro_batches=num_micro_batches, submesh_physical_shape_space="all", submesh_logical_shape_space="all")
             # parallel_method = alpa.PipeshardParallel(stage_mode="uniform", num_micro_batches=num_micro_batches)
