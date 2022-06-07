@@ -114,6 +114,21 @@ Install from Source
     cd alpa
     pip3 install -e .[dev]  # Note that the suffix `[dev]` is required to build custom modules.
 
+5. [Optional] For Alpa-PyTorch, install dependencies
+
+  .. code:: bash
+
+    # Install nightly version of torch and torchdistx
+    pip3 uninstall -y torch torchdistx
+    pip install torchdistx --pre --extra-index-url https://download.pytorch.org/whl/nightly/cpu
+
+    # Build functorch from source
+    cd ${HOME_DIR}
+    rm -rf ${HOME_DIR}/functorch
+    git clone https://github.com/pytorch/functorch
+    cd ${HOME_DIR}/functorch
+    git pull origin main
+    python3 setup.py install
 
 .. note::
 

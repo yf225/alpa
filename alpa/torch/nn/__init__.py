@@ -366,22 +366,28 @@ def functionalize(module: torch.nn.Module, inputs, batch_dim, num_micro_batches)
         # and both batch size and "-1" size are hardcoded in FX IR.
         # As a result, we need to generate two graphs (one with full-batch size, one with micro-batch size)
         # to be used by Alpa.
-        fx_ir_full_batch, module_func_full_batch = convert_pt_module_to_jax_func(module, inputs)
-        if num_micro_batches > 1:
-            micro_batch_size = inputs[0].shape[batch_dim] // num_micro_batches
-            _, module_func_micro_batch = convert_pt_module_to_jax_func(
-                module, [inputs[0].narrow(batch_dim, 0, micro_batch_size)]
-            )
+        fx_ir_full_batch, _ = convert_pt_module_to_jax_func(module, inputs)
+        # if num_micro_batches > 1:
+        #     micro_batch_size = inputs[0].shape[batch_dim] // num_micro_batches
+        #     _, module_func_micro_batch = convert_pt_module_to_jax_func(
+        #         module, [inputs[0].narrow(batch_dim, 0, micro_batch_size)]
+        #     )
+        micro_batch_size = inputs[0].shape[batch_dim] // num_micro_batches
+        _, module_func_micro_batch = convert_pt_module_to_jax_func(
+            module, [inputs[0].narrow(batch_dim, 0, micro_batch_size)]
+        )
 
         def module_func(*inputs):
             if num_micro_batches > 1:
                 # functionalized module input signature is (params, bufs, x), so actual input is at index 2.
                 if inputs[2].shape[batch_dim] == micro_batch_size:
                     return module_func_micro_batch(*inputs)
-                else:
-                    return module_func_full_batch(*inputs)
+                raise Exception
+                # else:
+                #     return module_func_full_batch(*inputs)
             else:
-                return module_func_full_batch(*inputs)
+                # return module_func_full_batch(*inputs)
+                return module_func_micro_batch(*inputs)
 
         params_pt = dict(named_parameters(fx_ir_full_batch))
         bufs_pt = dict(named_buffers(fx_ir_full_batch))

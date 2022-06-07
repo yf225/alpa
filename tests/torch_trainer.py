@@ -33,7 +33,7 @@ def train_torch_module(pt_module, weight_init_func, dataloader):
         if atorch.mode() == "dist":
             alpa.init(cluster="ray")
 
-        num_micro_batches = 1
+        num_micro_batches = 2
 
         # This sets both `torch.manual_seed` and `alpa.manual_seed` (if dist mode) under the hood.
         atorch.manual_seed(seed=123)
